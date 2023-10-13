@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 using PasswordManager.Core.Interfaces;
 using PasswordManager.Core.Interfaces.Repositories;
@@ -11,14 +12,16 @@ public class VaultRepository : IVaultRepository
 {
     private readonly IMongoCollection<VaultItem> _vaultItems;
     private readonly VaultItemConverter _converter;
+    private readonly IConfiguration _config;
     
     public VaultRepository()
     {
+        _config = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .Build();
         _converter = new VaultItemConverter();
-        const string connectionuri =
-            "mongodb+srv://annechristensen:BVu4uofJTGhw1J9u@cluster0.eljsoo0.mongodb.net/?retryWrites=true&w=majority";
-
-        var settings = MongoClientSettings.FromConnectionString(connectionuri);
+       
+        var settings = MongoClientSettings.FromConnectionString(_config.GetConnectionString("MongoDB"));
         var client = new MongoClient(settings);
         var db = client.GetDatabase("PasswordManager");
 
