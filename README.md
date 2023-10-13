@@ -10,6 +10,7 @@
 
 ### 1.2. Authenticate/Authorize
 - Create a new login or log in to your vault as an existing user
+- existing user: username: nyuser password: ANNE123anne!
 
 ## Documentation of the Product
 
