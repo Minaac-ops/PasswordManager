@@ -120,6 +120,7 @@ namespace PasswordManager
                     CreateItem();
                     break;
                 case "3":
+                    Console.Clear();
                     Environment.Exit(0);
                     break;
             }
@@ -179,26 +180,39 @@ namespace PasswordManager
                 Console.WriteLine($"║ Password : {_authService.GetDecryptedPassword(key, item.EncryptedPassword),-24} ║");
                 Console.WriteLine("╚══════════════════════════════════╝");
                 Console.WriteLine();
-                
-                Console.WriteLine("1 to go back to main menu or 2 to exit application");
+            }
+            Console.WriteLine("1 to go back to main menu or 2 to exit application");
 
-                switch (Console.ReadLine())
-                {
-                    case "1":
-                        Menu();
-                        break;
-                    case "2":
-                        Environment.Exit(0);
-                        break;
-                }
+            switch (Console.ReadLine())
+            {
+                case "1":
+                    Menu();
+                    break;
+                case "2":
+                    Console.Clear();
+                    Environment.Exit(0);
+                    break;
             }
         }
         
         private static string GeneratePassword()
         {
             var random = new Random();
-            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$%&!@";
-            return new string(Enumerable.Repeat(chars, 12).Select(s => s[random.Next(s.Length)]).ToArray());
+            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$%&!";
+            var pass = new StringBuilder();
+
+            while (pass.Length < 12)
+            {
+                var index = random.Next(chars.Length);
+                var randomchar = chars[index];
+
+                if (!pass.ToString().Contains(randomchar.ToString()))
+                {
+                    pass.Append(randomchar);
+                }
+            }
+
+            return pass.ToString();
         }
 
         private static string ReadPassword()
