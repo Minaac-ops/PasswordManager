@@ -12,16 +12,20 @@ public class UserRepository : IUserRepository
 {
     private readonly IMongoCollection<User> _users;
     private readonly UserConverter _converter;
-    private readonly IConfiguration _config;
-    
+    private readonly IConfigurationRoot _config;
+
     public UserRepository()
     {
-        _config = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
+        var basePath = AppDomain.CurrentDomain.BaseDirectory;
+        var configPath = Path.Combine(basePath, "../../../../PasswordManager.Infrastructure/appsettings.json");
+
+        _config = new ConfigurationBuilder()
+            .AddJsonFile(configPath)
             .Build();
         
         _converter = new UserConverter();
         var settings = MongoClientSettings.FromConnectionString(_config.GetConnectionString("MongoDB"));
+
         var client = new MongoClient(settings);
         var db = client.GetDatabase("PasswordManager");
 

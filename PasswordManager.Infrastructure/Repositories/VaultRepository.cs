@@ -12,13 +12,18 @@ public class VaultRepository : IVaultRepository
 {
     private readonly IMongoCollection<VaultItem> _vaultItems;
     private readonly VaultItemConverter _converter;
-    private readonly IConfiguration _config;
-    
+    private readonly IConfigurationRoot _config;
+
     public VaultRepository()
     {
-        _config = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
+        var basePath = AppDomain.CurrentDomain.BaseDirectory;
+        var configPath = Path.Combine(basePath, "../../../../PasswordManager.Infrastructure/appsettings.json");
+
+        _config = new ConfigurationBuilder()
+            .AddJsonFile(configPath)
             .Build();
+
+        
         _converter = new VaultItemConverter();
        
         var settings = MongoClientSettings.FromConnectionString(_config.GetConnectionString("MongoDB"));
