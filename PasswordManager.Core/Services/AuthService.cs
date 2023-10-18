@@ -12,7 +12,7 @@ public class AuthService : IAuthService
 {
     public bool AuthenticateLogin(UserModel user, string providedPassword)
     {
-        using var df2 = new Rfc2898DeriveBytes(providedPassword, user.PasswordSalt, 10000, HashAlgorithmName.SHA512);
+        using var df2 = new Rfc2898DeriveBytes(providedPassword, user.PasswordSalt, 600000, HashAlgorithmName.SHA512);
         var calculatedHash = df2.GetBytes(64);
 
         return CompareByteArrays(calculatedHash, user.PasswordHash);
@@ -24,6 +24,8 @@ public class AuthService : IAuthService
         
         aes.Key = Encoding.UTF8.GetBytes(key);
         aes.IV = new byte[16];
+        var random = new Random();
+        random.NextBytes(aes.IV);
 
         var decrypt = aes.CreateDecryptor(aes.Key, aes.IV);
 
