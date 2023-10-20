@@ -5,24 +5,16 @@ namespace PasswordManager.Infrastructure.Converters;
 
 public class UserConverter
 {
-    public User Convert(UserModel model)
+    public IEnumerable<UserModel> Convert(List<User> users, List<SecureUserKeys> keys)
     {
-        return new User
+        var combinedUsers = users.Select(user => new UserModel
         {
-            Username = model.Username,
-            PasswordHash = model.PasswordHash,
-            PasswordSalt = model.PasswordSalt
-        };
-    }
-
-    public UserModel Convert(User schema)
-    {
-        return new UserModel
-        {
-            Id = schema.Id.ToString(),
-            Username = schema.Username,
-            PasswordHash = schema.PasswordHash,
-            PasswordSalt = schema.PasswordSalt
-        };
+            Id = user.Id.ToString()!,
+            Username = user.Username,
+            EncryptedRandom = user.EncryptedRandom,
+            IV = keys.FirstOrDefault(k => k.UserId == user.Id.ToString())!.IV,
+            PasswordSalt = keys.FirstOrDefault(k => k.UserId == user.Id.ToString())!.PasswordSalt
+        });
+        return combinedUsers;
     }
 }

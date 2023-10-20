@@ -18,11 +18,6 @@ public class UserService : IUserService
     {
         return _repo.GetAllUsers();
     }
-
-    public UserModel GetUser(string email)
-    {
-        return _repo.GetUser(email);
-    }
     
     public void CreateUser(UserModel user)
     {

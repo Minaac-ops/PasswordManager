@@ -1,4 +1,5 @@
 using System.Net.Security;
+using System.Runtime.InteropServices.JavaScript;
 using System.Security.Cryptography;
 using System.Text;
 using PasswordManager.Core.Interfaces;
@@ -10,40 +11,67 @@ namespace PasswordManager.Core.Services;
 
 public class AuthService : IAuthService
 {
+    private byte[] key;
+    private readonly IVaultService _vaultService;
+
+    public AuthService(IVaultService vaultService)
+    {
+        _vaultService = vaultService;
+    }
+    
     public bool AuthenticateLogin(UserModel user, string providedPassword)
     {
         using var df2 = new Rfc2898DeriveBytes(providedPassword, user.PasswordSalt, 600000, HashAlgorithmName.SHA512);
-        var calculatedHash = df2.GetBytes(64);
+        var calculatedHash = df2.GetBytes(256/8);
+        Console.WriteLine(user.EncryptedRandom);
+        var tryToDecrypt = user.EncryptedRandom;
 
-        return CompareByteArrays(calculatedHash, user.PasswordHash);
+        using var aes = Aes.Create();
+
+        aes.Key = calculatedHash;
+        aes.IV = user.IV;
+
+        try
+        {
+            var decrypt = aes.CreateDecryptor(aes.Key, aes.IV);
+        
+            using var ms = new MemoryStream(tryToDecrypt);
+            using var cs = new CryptoStream(ms, decrypt, CryptoStreamMode.Read);
+            using var sr = new StreamReader(cs);
+            key = calculatedHash;
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Invalid username or password");
+            return false;
+        }
     }
 
-    public string GetDecryptedPassword(string key, byte[] encryptedPassword)
+    public string GetDecryptedPassword(ItemModel item)
     {
         using var aes = Aes.Create();
         
-        aes.Key = Encoding.UTF8.GetBytes(key);
-        aes.IV = new byte[16];
-        var random = new Random();
-        random.NextBytes(aes.IV);
+        aes.Key = key;
+        aes.IV = item.IV;
 
         var decrypt = aes.CreateDecryptor(aes.Key, aes.IV);
 
-        using var ms = new MemoryStream(encryptedPassword);
+        using var ms = new MemoryStream(item.EncryptedPassword);
         using var cs = new CryptoStream(ms, decrypt, CryptoStreamMode.Read);
         using var sr = new StreamReader(cs);
 
         return sr.ReadToEnd();
     }
 
-    public byte[] EncryptItemPassword(string key, string plaintextpass)
+    public void EncryptItemPassword(ItemModel newItem, string plaintextpass)
     {
         byte[] encryptedPass;
 
         using (var aes = Aes.Create())
         {
-            aes.Key = Encoding.UTF8.GetBytes(key);
-            aes.IV = new byte[16];
+            aes.Key = key;
+            aes.GenerateIV();
 
             var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
 
@@ -58,9 +86,10 @@ public class AuthService : IAuthService
                     encryptedPass = ms.ToArray();
                 }
             }
+            newItem.EncryptedPassword = encryptedPass;
+            newItem.IV = aes.IV;
         }
-
-        return encryptedPass;
+        _vaultService.SaveItem(newItem);
     }
 
     private bool CompareByteArrays(byte[] calculatedHash, byte[] userPasswordHash)
@@ -75,28 +104,58 @@ public class AuthService : IAuthService
 
     public UserModel PasswordHasher(string username, string password)
     {
-        GenerateUserCredentials(password, out var passwordHash, out var passwordSalt);
-
+        GenerateUserCredentials(password, out var iv, out var passwordSalt, out var random);
+        
         var user = new UserModel
         {
             Username = username,
-            PasswordHash = passwordHash,
-            PasswordSalt = passwordSalt
+            PasswordSalt = passwordSalt,
+            IV = iv,
+            EncryptedRandom = random
         };
         return user;
     }
 
-    private void GenerateUserCredentials(string password, out byte[] passwordHash, out byte[] passwordSalt)
+    private void GenerateUserCredentials(string password, out byte[] iv, out byte[] passwordSalt, out byte[] random)
     {
+        using var aes = Aes.Create();
+        aes.GenerateIV();
+        
         using var rng = new RNGCryptoServiceProvider();
         // generating a random salt
         var salt = new byte[32];
         rng.GetBytes(salt);
 
-        // use Rfc with 10.000 iterations og sha for password hashing.
-        using var df2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA512);
-        
-        passwordHash = df2.GetBytes(64);
+        // use Rfc with 60.000 iterations og sha for password hashing.
+        using var df2 = new Rfc2898DeriveBytes(password, salt, 600000, HashAlgorithmName.SHA512);
+        aes.Key = df2.GetBytes(256/8);
+        var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+
+        using (var ms = new MemoryStream())
+        {
+            using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+            {
+                using (var sw = new StreamWriter(cs))
+                {
+                    sw.Write(GenerateRandomString());
+                }
+                random = ms.ToArray();
+            }
+        }
+        iv = aes.IV;
         passwordSalt = salt;
+    }
+
+    private string GenerateRandomString()
+    {
+        var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        var sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++)
+        {
+            int index = random.Next(chars.Length);
+            sb.Append(chars[index]);
+        }
+        return sb.ToString();
     }
 }

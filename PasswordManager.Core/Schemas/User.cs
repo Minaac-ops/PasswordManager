@@ -11,10 +11,6 @@ public class User
     
     [BsonElement("Username")]
     public string Username { get; set; }
-    
-    [BsonElement("HashedPassword")]
-    public byte[] PasswordHash { get; set; }
-
-    [BsonElement("PasswordSalt")]
-    public byte[] PasswordSalt { get; set; }
+    [BsonElement("EncryptedRandom")]
+    public byte[] EncryptedRandom { get; set; }
 }

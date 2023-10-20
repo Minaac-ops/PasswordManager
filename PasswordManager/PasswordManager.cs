@@ -59,6 +59,7 @@ namespace PasswordManager
                 if (newUser.IsPasswordValid())
                 {
                     var user = _authService.PasswordHasher(username!, password!);
+        
                     _userService.CreateUser(user);
                     Thread.Sleep(3000);
                     Welcome();
@@ -147,19 +148,14 @@ namespace PasswordManager
                     break;
                 }
             }
-            var salt = Encoding.ASCII.GetString(_loggedInUser.PasswordSalt);
-            var key = salt.Substring(0, 32);
-            var encryptedPassword = _authService.EncryptItemPassword(key, password);
-       
+            
             var newItem = new ItemModel
             {
-                ItemName = itemName!,
-                Username = username!,
-                EncryptedPassword = encryptedPassword,
-                UserId = _loggedInUser.Id
+                ItemName = itemName,
+                Username = username,
+                UserId = _loggedInUser.Id,
             };
-            
-            _vaultService.SaveItem(newItem);
+            _authService.EncryptItemPassword(newItem, password);
             
             Console.WriteLine("Your new item is saved to your vault.");
             Thread.Sleep(3);
@@ -171,13 +167,11 @@ namespace PasswordManager
             var items = _vaultService.GetItemsByUserId(_loggedInUser.Id).ToList();
             foreach (var item in items)
             {
-                var salt = Encoding.ASCII.GetString(_loggedInUser.PasswordSalt);
-                var key = salt.Substring(0, 32);
                 Console.WriteLine("╔══════════════════════════════════╗");
                 Console.WriteLine($"║        {item.ItemName}          ║");
                 Console.WriteLine("╠══════════════════════════════════╣");
                 Console.WriteLine($"║ Username : {item.Username,-24} ║");
-                Console.WriteLine($"║ Password : {_authService.GetDecryptedPassword(key, item.EncryptedPassword),-24} ║");
+                Console.WriteLine($"║ Password : {_authService.GetDecryptedPassword(item),-24} ║");
                 Console.WriteLine("╚══════════════════════════════════╝");
                 Console.WriteLine();
             }
