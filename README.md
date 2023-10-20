@@ -1,7 +1,7 @@
 # PasswordManager - a console Password Manager in .NET
 
 ## Instructions
-
+- create appsettings.json with db credentials in PasswordManager.Infrastructure
 ### 1.1. Run
 - For Visual Studio Code: In the terminal, navigate to PasswordManager -> `dotnet run`
 ![Image](https://github.com/Minaac-ops/PasswordManager/assets/72027505/f463fcb1-77e0-499b-8b82-b3af10d81fe2)
@@ -36,13 +36,13 @@ In this case, users need only use their master password. Another option is to us
 
 In any case, a strong master password is essential, as it is the easiest way to gain access. During the creation of new users, checks are made on the master password to ensure a combination of uppercase and lowercase letters, digits, special characters, and a minimum length of 9 characters.
 
-The password undergoes a cryptographic process before the user credentials are stored in the database, ensuring that no plain text passwords are stored.
+The password undergoes a cryptographic process before the user credentials are stored in different database, one for the SecureUserKeys and one for the UserCredentials.
 
-- Generating a random salt unique to each user and part of the user's credentials.
+- Generating a random salt unique to each user.
 - Using an instance of Rfc2898DeriveBytes for key derivation and deriving a cryptographic key from the user's password combined with the random salt. A high iteration increases the time required to perform a brute-force attack.
-- Finally, generating the password hash.
+- Finally, generating the password hash. The hash is not stored in the database.
 
-The unique salt is also used for encrypting and decrypting passwords in a vault, providing additional security so that you cannot read plain text passwords without the owner's unique salt once you have accessed a vault.
+The hash is used for encrypting and decrypting passwords in a vault, once the user has been authenticated the hash is stored in a variable (with the intent of resetting the variable once a user is logged out). Log out functionality is not yet implemented.
 
 Strong hashing algorithms and key derivation techniques have been used to ensure the secure storage of data, preventing unauthorized access to plain text passwords.
 
