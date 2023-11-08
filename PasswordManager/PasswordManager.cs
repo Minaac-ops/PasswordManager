@@ -27,6 +27,7 @@ namespace PasswordManager
 
         private void Welcome()
         {
+            Console.Clear();
             Console.WriteLine("Welcome to Password Manager. Your options are:" +
                               "\n1: New user? | 2: Login");
             
@@ -68,7 +69,7 @@ namespace PasswordManager
                 {
                     Console.WriteLine(
                         "Password must be at least 8 characters and must contain small and capital letters, digits and at least one special character.");
-                    Thread.Sleep(4000);
+                    Thread.Sleep(6000);
                     Register();
                 }
 
@@ -151,8 +152,8 @@ namespace PasswordManager
             
             var newItem = new ItemModel
             {
-                ItemName = itemName,
-                Username = username,
+                ItemName = itemName!,
+                Username = username!,
                 UserId = _loggedInUser.Id,
             };
             _authService.EncryptItemPassword(newItem, password);

@@ -11,7 +11,7 @@ namespace PasswordManager.Core.Services;
 
 public class AuthService : IAuthService
 {
-    private byte[] key;
+    private byte[] _key;
     private readonly IVaultService _vaultService;
 
     public AuthService(IVaultService vaultService)
@@ -23,7 +23,6 @@ public class AuthService : IAuthService
     {
         using var df2 = new Rfc2898DeriveBytes(providedPassword, user.PasswordSalt, 600000, HashAlgorithmName.SHA512);
         var calculatedHash = df2.GetBytes(256/8);
-        Console.WriteLine(user.EncryptedRandom);
         var tryToDecrypt = user.EncryptedRandom;
 
         using var aes = Aes.Create();
@@ -38,12 +37,12 @@ public class AuthService : IAuthService
             using var ms = new MemoryStream(tryToDecrypt);
             using var cs = new CryptoStream(ms, decrypt, CryptoStreamMode.Read);
             using var sr = new StreamReader(cs);
-            key = calculatedHash;
+            _key = calculatedHash;
             return true;
         }
         catch (Exception e)
         {
-            Console.WriteLine("Invalid username or password");
+            Console.WriteLine("Please right a valid username and password");
             return false;
         }
     }
@@ -52,7 +51,7 @@ public class AuthService : IAuthService
     {
         using var aes = Aes.Create();
         
-        aes.Key = key;
+        aes.Key = _key;
         aes.IV = item.IV;
 
         var decrypt = aes.CreateDecryptor(aes.Key, aes.IV);
@@ -66,15 +65,14 @@ public class AuthService : IAuthService
 
     public void EncryptItemPassword(ItemModel newItem, string plaintextpass)
     {
-        byte[] encryptedPass;
-
         using (var aes = Aes.Create())
         {
-            aes.Key = key;
+            aes.Key = _key;
             aes.GenerateIV();
 
             var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
 
+            byte[] encryptedPass;
             using (var ms = new MemoryStream())
             {
                 using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
@@ -92,16 +90,6 @@ public class AuthService : IAuthService
         _vaultService.SaveItem(newItem);
     }
 
-    private bool CompareByteArrays(byte[] calculatedHash, byte[] userPasswordHash)
-    {
-        if (calculatedHash.Length != userPasswordHash.Length)
-        {
-            return false;
-        }
-
-        return !calculatedHash.Where((t, i) => t != userPasswordHash[i]).Any();
-    }
-
     public UserModel PasswordHasher(string username, string password)
     {
         GenerateUserCredentials(password, out var iv, out var passwordSalt, out var random);
@@ -116,7 +104,7 @@ public class AuthService : IAuthService
         return user;
     }
 
-    private void GenerateUserCredentials(string password, out byte[] iv, out byte[] passwordSalt, out byte[] random)
+    private static void GenerateUserCredentials(string password, out byte[] iv, out byte[] passwordSalt, out byte[] random)
     {
         using var aes = Aes.Create();
         aes.GenerateIV();
@@ -127,7 +115,7 @@ public class AuthService : IAuthService
         rng.GetBytes(salt);
 
         // use Rfc with 60.000 iterations og sha for password hashing.
-        using var df2 = new Rfc2898DeriveBytes(password, salt, 600000, HashAlgorithmName.SHA512);
+        using var df2 = new Rfc2898DeriveBytes(password, salt, 60000, HashAlgorithmName.SHA512);
         aes.Key = df2.GetBytes(256/8);
         var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
 
@@ -146,14 +134,14 @@ public class AuthService : IAuthService
         passwordSalt = salt;
     }
 
-    private string GenerateRandomString()
+    private static string GenerateRandomString()
     {
-        var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         var random = new Random();
         var sb = new StringBuilder(12);
-        for (int i = 0; i < 12; i++)
+        for (var i = 0; i < 12; i++)
         {
-            int index = random.Next(chars.Length);
+            var index = random.Next(chars.Length);
             sb.Append(chars[index]);
         }
         return sb.ToString();
